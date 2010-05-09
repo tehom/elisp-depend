@@ -1,6 +1,6 @@
 * Authors
 
-elisp-depend is by Andy Stewart.  I moved it here (this directory
-under git) so that I could make it understand dir-slash style module
-names.
+ * Andy Stewart, original and primary author
+
+ * Tom Breton (Tehom), current maintainer
 
