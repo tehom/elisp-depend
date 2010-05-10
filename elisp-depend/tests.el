@@ -1,4 +1,4 @@
-;;;_ tests.el --- Tests for elisp-depend
+;;;_ elisp-depend/tests.el --- Tests for elisp-depend
 
 ;;;_. Headers
 ;;;_ , License
@@ -24,8 +24,8 @@
 
 ;;;_ , Commentary:
 
-;; elisp-depend is by Andy Stewart, not by me.
-
+;; elisp-depend is originally by Andy Stewart.  See the
+;; elisp-depend.el comments.
 
 ;;;_ , Requires
 (require 'elisp-depend)
@@ -34,41 +34,69 @@
 (require 'emtest/testhelp/eg)
 
 ;;;_. Body
-;;;_ , Mock load history
+;;;_ , Data
+;;;_  . Mock load history
 
 (defconst elisp-depend:th:load-history 
    '(
-       ("/usr/share/emacs/22.2/lisp/unused.elc")
-       ("/usr/share/emacs/22.2/lisp/foo.el"
+       ("/home/localuser/lisp/unused.elc")
+       ("/home/localuser/lisp/foo.el"
 	  (provide . foo-module)
 	  (require . edebug))
-       ("/usr/share/emacs/22.2/lisp/bar.elc"
-	  (defun . bar-toggle)
+       ("/home/localuser/lisp/bar.elc"
+	  (defun . bar-a-fun)
 	  (require . easymenu)
-	  bar-mode-menus
+	  bar-a
+	  bar-b
+	  bar-c
 	  (provide . bar-module)
 	  (require . edebug))
-       ("/usr/share/emacs/22.2/lisp/entry/with/slashes.elc"
+       ("/home/localuser/lisp/entry/with/slashes.elc"
 	  (provide . entry/with/slashes)))
    
    "Example load-history" )
+;;;_  . Dir locations
+(defconst elisp-depend:th:examples-dir
+   (emt:expand-filename-by-load-file "examples") 
+   "Directory where examples are" )
 
-;;;_ , Examples
+;;;_  . Examples
 (defconst elisp-depend:td
    (emt:eg:define+ ()
-      (group ((name foo-el))
-	 (item ((role filename)) "/usr/share/emacs/22.2/lisp/foo.el")
-	 (item ((role expected)) "foo-module"))
-      (group ((name bar-elc))
-	 (item ((role filename)) "/usr/share/emacs/22.2/lisp/bar.elc")
-	 (item ((role expected)) "bar-module"))
-      (group ((name not-in-load-history))
-	 (item ((role filename)) "/usr/share/emacs/not-in-load-history.elc")
-	 (item ((role expected)) "not-in-load-history"))
-      (group ((name with-slashes))
-	 (item ((role filename)) "/usr/share/emacs/22.2/lisp/entry/with/slashes.elc")
-	 (item ((role expected)) "entry/with/slashes"))
-      ))
+      (group ((mapping module-name))
+	 (group ((name foo-el))
+	    (item ((role fullpath)) "/home/localuser/lisp/foo.el")
+	    (item ((role expected)) "foo-module"))
+	 (group ((name bar-elc))
+	    (item ((role fullpath)) "/home/localuser/lisp/bar.elc")
+	    (item ((role expected)) "bar-module"))
+	 (group ((name not-in-load-history))
+	    (item ((role fullpath)) "/usr/share/emacs/not-in-load-history.elc")
+	    (item ((role expected)) "not-in-load-history"))
+	 (group ((name with-slashes))
+	    (item ((role fullpath)) "/home/localuser/lisp/entry/with/slashes.elc")
+	    (item ((role expected)) "entry/with/slashes")))
+
+      (group ((mapping syms-in-file))
+	 (group ((name file0))
+	    (item ((role filename)) "file0.el")
+	    (item ((role expected)) '()))
+	 (group ((name file1))
+	    (item ((role filename)) "file1.el")
+	    (item ((role expected)) '()))
+	 (group ((name file2))
+	    (item ((role filename)) "file2.el")
+	    (item ((role expected)) '()))
+	 ;;Finding variable names is not supported.
+;; 	 (group ((name file3))
+;; 	    (item ((role filename)) "file3.el")
+;; 	    (item ((role expected)) 
+;; 	       '(("/home/localuser/lisp/bar.elc" bar-a))))
+	 (group ((name file4))
+	    (item ((role filename)) "file4.el")
+	    (item ((role expected)) 
+	       '(("/home/localuser/lisp/bar.elc" bar-a-fun))))	 
+	 )))
 
 
 ;;;_ , elisp-depend-filename
@@ -76,23 +104,49 @@
    ((of 'elisp-depend-filename)
       (:surrounders
 	 '(  (emt:eg:with elisp-depend:td ())
-	     (emt:eg:map name nil)
+	     (flet ((bar-a-fun ()())))
 	     (let
-		((load-history elisp-depend:th:load-history))
+		(   bar-a bar-b bar-c
+		   (load-history elisp-depend:th:load-history))
 		(emt:doc "Situation: With a known load-history.")))))
    (nil
-      (progn
-	 (emt:doc "Response: We get the expected result.")
-	 (assert
-	    (string=
-	       (elisp-depend-filename (emt:eg (role filename)))
-	       (emt:eg (role expected)))
-	    t))))
+      (emt:eg:narrow ((mapping module-name))
+	 (emt:eg:map name nil
+	    (emt:doc "Response: We get the expected result.")
+	    (assert
+	       (string=
+		  (elisp-depend-filename (emt:eg (role fullpath)))
+		  (emt:eg (role expected)))
+	       t))))
+   )
+
+(emt:deftest-3 
+   ((of 'elisp-depend-map)
+      (:surrounders
+	 '(  (emt:eg:with elisp-depend:td ())
+	     (flet ((bar-a-fun ()())))
+	     (let
+		(   bar-a bar-b bar-c
+		   (load-history elisp-depend:th:load-history))
+		(emt:doc "Situation: With all the relevant symbols bound.")))))
+   (nil
+      (emt:eg:narrow ((mapping syms-in-file))
+	 (emt:eg:map name nil
+	    (with-buffer-containing-object
+	       (:file (emt:eg (role filename)) 
+		  :dir elisp-depend:th:examples-dir)
+	       (emt:doc "Operation: `elisp-depend-map'.")
+	       (emt:doc "Response: Gets the expected result.")
+	       (assert
+		  (equal
+		     (elisp-depend-map)
+		     (emt:eg (role expected)))
+		  t))))))
 
 ;;;_. Footers
 ;;;_ , Provides
 
-(provide 'tests)
+(provide 'elisp-depend/tests)
 
 ;;;_ * Local emacs vars.
 ;;;_  + Local variables:
@@ -100,4 +154,4 @@
 ;;;_  + End:
 
 ;;;_ , End
-;;; tests.el ends here
+;;; elisp-depend/tests.el ends here
