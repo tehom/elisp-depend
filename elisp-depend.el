@@ -5,6 +5,7 @@
 ;; Author: Andy Stewart lazycat.manatee@gmail.com
 ;; Maintainer: Tom Breton (Tehom) tehom@panix.com
 ;; Copyright (C) 2009, Andy Stewart, all rights reserved.
+;; Copyright (C) 2010, Tom Breton, all rights reserved.
 ;; Created: 2009-01-11 19:40:45
 ;; Version: 0.4.0
 ;; Last-Updated: Sat  8 May, 2010 10:51 PM
