@@ -95,7 +95,12 @@
 	 (group ((name file4))
 	    (item ((role filename)) "file4.el")
 	    (item ((role expected)) 
-	       '(("/home/localuser/lisp/bar.elc" bar-a-fun))))	 
+	       '(("/home/localuser/lisp/bar.elc" bar-a-fun))))
+	 (group ((name file5))
+	    (item ((role filename)) "file5.el")
+	    (item ((role expected)) 
+	       ;;Also sees funcall but properly ignores it
+	       '(("/home/localuser/lisp/bar.elc" bar-a-fun))))
 	 )))
 
 
