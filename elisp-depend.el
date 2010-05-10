@@ -232,13 +232,11 @@ Return depend map as format: (filepath symbol-A symbol-B symbol-C)."
             (setq deps (cons (cons filepath (list symbol)) deps)))))
       deps)))
 
-(defun elisp-depend-get-load-history-line (path-sans-ext extension)
-   "Return line in load-history correspoding to PATH-SANS-EXT with
-   EXTENSION.
+(defun elisp-depend-get-load-history-line (true-path)
+   "Return line in load-history correspoding to TRUE-PATH.
 Return nil if there is none."
-   (assoc 
-      (concat path-sans-ext extension) 
-      load-history))
+   (cdr
+      (assoc true-path load-history)))
 
 (defun elisp-depend-filename (fullpath)
   "Return filename without extension and path.
@@ -246,16 +244,8 @@ FULLPATH is the full path of file."
    
    (let*
       (  
-	 (true-path-sans-ext
-	    (file-name-sans-extension
-	       (file-truename fullpath)))
 	 (file-history
-	    (cdr
-	       (or
-		  (elisp-depend-get-load-history-line 
-		     true-path-sans-ext ".elc")
-		  (elisp-depend-get-load-history-line 
-		     true-path-sans-ext ".el"))))
+	    (elisp-depend-get-load-history-line fullpath))
 	 (lib-name
 	    (when file-history
 	       (cdr
