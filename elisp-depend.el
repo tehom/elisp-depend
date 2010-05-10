@@ -340,8 +340,7 @@ Otherwise return nil."
 
 (defun elisp-depend-build-in-function-p (symbol)
   "Return t if SYMBOL is a build-in function."
-  (string-equal (format "#<subr %s>" (symbol-name symbol))
-                (format "%s" (symbol-function symbol))))
+   (subrp (symbol-function symbol)))
 
 (defun elisp-depend-current-parse-state ()
   "Return parse state of point from beginning of defun."
