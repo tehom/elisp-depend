@@ -143,7 +143,7 @@
 
 (defcustom elisp-depend-directory-list
   '("/usr/share/emacs/")
-  "The ignore directory for search."
+  "List of directories that search should ignore."
   :type 'list
   :group 'elisp-depend)
 
@@ -163,7 +163,7 @@
             (dolist (symbol (cdr element))
               (if (functionp symbol)
                   (insert (format "(autoload '%s \"%s\")\n" symbol library-name))))))
-      (message "Not need any depend libraries."))))
+      (message "Doesn't need any extra libraries."))))
 
 (defun elisp-depend-insert-comment ()
   "Insert a block of `sym' statements into an elisp file."
@@ -174,7 +174,7 @@
           (insert ";; ")
           (dolist (element deps)
             (insert (format "`%s' " (elisp-depend-filename (car element))))))
-      (message "Not need any depend libraries."))))
+      (message "Doesn't need any extra libraries."))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Utilities Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun elisp-depend-map (&optional buffer build-in)
@@ -292,13 +292,14 @@ FULLPATH is the full path of file."
 
 (defun elisp-depend-filter-pseudo-function-symbol (symbol)
   "Filter pseudo function with SYMBOL.
-In buffer, some symbol is not use as function,
-example use `buffer' as local buffer.
-But `symbol-file' will consider it's function
-if have function have same name with `buffer'.
-So i try to check whether symbol is real function.
-If this symbol is function, at front have ( or ' ,
-otherwise this symbol is not use as function."
+In buffer, not all symbols are used as a functions.
+For example, `list' might be a variable holding a list.
+But `symbol-file' will consider it to be a function
+if have a function has same name, like `list'.
+
+So I try to check whether symbol is real function.
+If this symbol is function, the character immediately before it will
+be either ( or ' , otherwise this symbol is not considered a function."
   (save-excursion
     (let (current-char)
       (backward-char (length (symbol-name symbol)))
