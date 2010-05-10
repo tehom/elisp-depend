@@ -95,6 +95,8 @@
 ;;
 
 ;;; Change log:
+;; 2010/05/10
+;;      * Bugfix: Fixed error if file didn't start with a comment.
 ;; 2010/05/08
 ;;      * Added require for `thingatpt'
 ;;      * Now slash-style module names are treated correctly.
@@ -328,7 +330,9 @@ Otherwise return nil."
     (let (symbol)
       (backward-up-list nil)            ;for compatibility Emacs 20
       (skip-chars-backward " \n\t")
-      (when (string-equal "(" (string (char-before)))
+      (when (and
+	       (> (point) 1)
+	       (string-equal "(" (string (char-before))))
         (forward-char -1)
         (skip-chars-backward " \n\t"))
       (setq symbol (symbol-at-point))
