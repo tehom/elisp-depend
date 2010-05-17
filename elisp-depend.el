@@ -150,6 +150,7 @@
   :group 'elisp-depend)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Interactive Functions. ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;###autoload
 (defun elisp-depend-insert-require ()
   "Insert a block of (require sym) or 'autoload statements into an elisp file."
   (interactive)
@@ -167,6 +168,7 @@
                   (insert (format "(autoload '%s \"%s\")\n" symbol library-name))))))
       (message "Doesn't need any extra libraries."))))
 
+;;;###autoload
 (defun elisp-depend-insert-comment ()
   "Insert a block of `sym' statements into an elisp file."
   (interactive)
