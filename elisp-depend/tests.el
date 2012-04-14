@@ -30,8 +30,8 @@
 ;;;_ , Requires
 (require 'elisp-depend)
 (require 'emtest/testhelp/standard)
-(require 'emtest/runner/define)
-(require 'emtest/testhelp/eg)
+(require 'emtest/main/define)
+(require 'emtest/testhelp/tagnames)
 
 ;;;_. Body
 ;;;_ , Data
@@ -57,12 +57,12 @@
    "Example load-history" )
 ;;;_  . Dir locations
 (defconst elisp-depend:th:examples-dir
-   (emt:expand-filename-by-load-file "examples") 
+   (emtb:expand-filename-by-load-file "examples") 
    "Directory where examples are" )
 
 ;;;_  . Examples
 (defconst elisp-depend:td
-   (emt:eg:define+ ()
+   (emtg:define+ ()
       (group ((mapping module-name))
 	 (group ((name foo-el))
 	    (item ((role fullpath)) "/home/localuser/lisp/foo.el")
@@ -108,44 +108,44 @@
 (emt:deftest-3 
    ((of 'elisp-depend-filename)
       (:surrounders
-	 '(  (emt:eg:with elisp-depend:td ())
+	 '(  (emtg:with elisp-depend:td ())
 	     (flet ((bar-a-fun ()())))
 	     (let
 		(   bar-a bar-b bar-c
 		   (load-history elisp-depend:th:load-history))
 		(emt:doc "Situation: With a known load-history.")))))
    (nil
-      (emt:eg:narrow ((mapping module-name))
-	 (emt:eg:map name nil
+      (emtg:narrow ((mapping module-name))
+	 (emtg:map name nil
 	    (emt:doc "Response: We get the expected result.")
 	    (assert
 	       (string=
-		  (elisp-depend-filename (emt:eg (role fullpath)))
-		  (emt:eg (role expected)))
+		  (elisp-depend-filename (emtg (role fullpath)))
+		  (emtg (role expected)))
 	       t))))
    )
 
 (emt:deftest-3 
    ((of 'elisp-depend-map)
       (:surrounders
-	 '(  (emt:eg:with elisp-depend:td ())
+	 '(  (emtg:with elisp-depend:td ())
 	     (flet ((bar-a-fun ()())))
 	     (let
 		(   bar-a bar-b bar-c
 		   (load-history elisp-depend:th:load-history))
 		(emt:doc "Situation: With all the relevant symbols bound.")))))
    (nil
-      (emt:eg:narrow ((mapping syms-in-file))
-	 (emt:eg:map name nil
+      (emtg:narrow ((mapping syms-in-file))
+	 (emtg:map name nil
 	    (with-buffer-containing-object
-	       (:file (emt:eg (role filename)) 
+	       (:file (emtg (role filename)) 
 		  :dir elisp-depend:th:examples-dir)
 	       (emt:doc "Operation: `elisp-depend-map'.")
 	       (emt:doc "Response: Gets the expected result.")
 	       (assert
 		  (equal
 		     (elisp-depend-map)
-		     (emt:eg (role expected)))
+		     (emtg (role expected)))
 		  t))))))
 
 ;;;_. Footers
