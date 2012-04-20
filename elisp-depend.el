@@ -9,8 +9,9 @@
 ;; Copyright (C) 2009, Andy Stewart, all rights reserved.
 ;; Copyright (C) 2010-2012, Tom Breton, all rights reserved.
 ;; Created: 2009-01-11 19:40:45
-;; Version: 1.0.0
-;; Last-Updated: Sat  8 May, 2010 10:51 PM
+;; Id: $Id$
+;; Version: 1.0.1
+;; Last-Updated: Fri 20 Apr, 2012
 ;;           By: Tom Breton
 ;; URL: http://www.emacswiki.org/emacs/download/elisp-depend.el
 ;; Keywords: elisp-depend
