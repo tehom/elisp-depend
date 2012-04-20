@@ -244,10 +244,23 @@ recurses on the rest."
 We don't try to understand argument lists or skip variables that
 are mentioned in them."
    (elisp-depend-get-syms-recurse sexp 3))
+(defun elisp-depend-defvar-form->sym-list (sexp)
+   "Gets syms from a definition form like \(DEF NAME BODY OPTIONS...\)."
+   (elisp-depend-sexp->sym-list (nthcar 2 sexp)))
 
 (defconst elisp-depend-special-explorers 
    (list
-      (list 'defun #'elisp-depend-defun-form->sym-list)
+      (list 'quote 
+	 #'(lambda (dummy) '()))
+      
+      (list 'defun
+	 #'elisp-depend-defun-form->sym-list)
+      (list 'defmacro
+	 #'elisp-depend-defun-form->sym-list)
+      (list 'defvar 
+	 #'elisp-depend-defvar-form->sym-list)
+      (list 'defconst 
+	 #'elisp-depend-defvar-form->sym-list)
       (list 'lambda 
 	 #'(lambda (sexp)
 	      (elisp-depend-get-syms-recurse sexp 2)))
