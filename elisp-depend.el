@@ -231,7 +231,10 @@ The top level is presented as a list, as if the buffer contents had been
 
 ;;;; Getting the symbols from a sexp list
 
-;; Exploration helpers.  These call elisp-depend-sexp->sym-list
+;; Exploration helpers.  These generally call
+;; elisp-depend-sexp->sym-list, effectively recursing.  They generally
+;; do not attempt to skip symbols governed by arglists, let forms,
+;; etc.
 
 (defun elisp-depend-get-syms-recurse (sexp n)
    "Gets syms from a form that ignores the first N arguments and
@@ -248,7 +251,7 @@ are mentioned in them."
    (elisp-depend-get-syms-recurse sexp 3))
 (defun elisp-depend-defvar-form->sym-list (sexp)
    "Gets syms from a definition form like \(DEF NAME BODY OPTIONS...\)."
-   (elisp-depend-sexp->sym-list (nthcar 2 sexp)))
+   (elisp-depend-sexp->sym-list (nth 2 sexp)))
 
 (defun elisp-depend-let-form->sym-list (sexp)
    "Gets syms from a let form like \(LET ((NAME BODY)...) BODY...\)."
@@ -260,33 +263,28 @@ are mentioned in them."
 	 (apply #'append
 	    (mapcar 
 	       #'(lambda (b-form)
-		    (elisp-depend-sexp->sym-list (cadr b-form)))
+		    (if (consp b-form)
+		       (elisp-depend-sexp->sym-list (cadr b-form))
+		       '()))
 	       binding-forms))
 	 (elisp-depend-get-syms-recurse (cddr sexp) 0))))
 
 
 (defconst elisp-depend-special-explorers 
-   (list
-      (list 'quote 
-	 #'(lambda (dummy) '()))
-      (list 'provide 
-	 #'(lambda (dummy) '()))
-      (list 'require 
-	 #'(lambda (dummy) '()))
+   '(
+      (quote (lambda (dummy) '()))
+      (provide (lambda (dummy) '()))
+      (require (lambda (dummy) '()))
 
-      (list 'defun
-	 #'elisp-depend-defun-form->sym-list)
-      (list 'defmacro
-	 #'elisp-depend-defun-form->sym-list)
-      (list 'defvar 
-	 #'elisp-depend-defvar-form->sym-list)
-      (list 'defconst 
-	 #'elisp-depend-defvar-form->sym-list)
-      (list 'lambda 
-	 #'(lambda (sexp)
-	      (elisp-depend-get-syms-recurse sexp 2)))
+      (defun elisp-depend-defun-form->sym-list)
+      (defmacro elisp-depend-defun-form->sym-list)
+      (defvar elisp-depend-defvar-form->sym-list)
+      (defconst elisp-depend-defvar-form->sym-list)
+      (lambda (lambda (sexp)
+		 (elisp-depend-get-syms-recurse sexp 2)))
       
-      
+       (let elisp-depend-let-form->sym-list)
+       (let* elisp-depend-let-form->sym-list)
       )
    "Alist of symbols to expand specially, mapping from symbol to
 explore function.  Explore functions take one argument, a sexp, and
@@ -309,7 +307,7 @@ This function does not expand macros."
 	 (let
 	    ((functor (car sexp)))
 	    (if
-	       (not (consp functor))
+	       (not (symbolp functor))
 	       ;; Functor is a lambda or similar.
 	       (elisp-depend-get-syms-recurse sexp 0)
 	       (let*
