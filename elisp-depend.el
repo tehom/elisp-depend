@@ -97,6 +97,9 @@
 ;;
 
 ;;; Change log:
+;; 2012/04/20
+;;      * Switched to `read' instead of parsing the file mnaually.
+
 ;; 2010/05/10
 ;;      * Bugfix: Fixed error if file didn't start with a comment.
 ;; 2010/05/08
@@ -137,7 +140,8 @@
 ;;
 
 ;;; Require
-(require 'thingatpt)
+;; (None)
+
 ;;; Code:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Customize ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -232,9 +236,8 @@ The top level is presented as a list, as if the buffer contents had been
 ;;;; Getting the symbols from a sexp list
 
 ;; Exploration helpers.  These generally call
-;; elisp-depend-sexp->sym-list, effectively recursing.  They generally
-;; do not attempt to skip symbols governed by arglists, let forms,
-;; etc.
+;; `elisp-depend-sexp->sym-list', implicitly recursing.  They do not
+;; attempt to skip symbols that are bound by arglists, let forms, etc.
 
 (defun elisp-depend-get-syms-recurse (sexp n)
    "Gets syms from a form that ignores the first N arguments and
@@ -369,9 +372,6 @@ This function does not expand macros."
       ;;
       dependencies))
 
-
-;; (elisp-depend-get-syms-recurse (elisp-depend-read-tree) 0)
-
 (defun elisp-depend-map (&optional buffer built-in)
   "Return depend map with BUFFER.
 If BUFFER is nil, use current buffer.
@@ -426,56 +426,6 @@ FULLPATH is the full path of file."
 	 (file-name-sans-extension 
 	    (file-name-nondirectory fullpath)))))
 
-(defun elisp-depend-skip-string ()
-  "Skip string for fast check."
-  (while (and (not (eobp))
-              (elisp-depend-in-string-p))
-    (goto-char (1+ (cdr (elisp-depend-string-start+end-points))))
-    (forward-symbol 1)))
-
-(defun elisp-depend-skip-comment ()
-  "Skip comment for fast check."
-  (while (and (not (eobp))
-              (elisp-depend-in-comment-p))
-    (search-forward-regexp "\\s>" nil t)
-    (forward-symbol 1)))
-
-(defun elisp-depend-skip-defun-name-and-argument ()
-  "Skip defun name and argument for fast check."
-  (let ((original-point (point))
-        (symbol (symbol-at-point)))
-    (when (and symbol
-               (string-equal "defun" (symbol-name symbol)))
-      (forward-char (- (length (symbol-name (symbol-at-point)))))
-      (skip-chars-backward " \n\t")
-      (if (string-equal "(" (string (char-before)))
-          (progn
-            (goto-char original-point)
-            (search-forward "(" nil t)
-            (forward-char -1)
-            (forward-list))
-        (goto-char original-point)))))
-
-(defun elisp-depend-filter-pseudo-function-symbol (symbol)
-  "Filter pseudo function with SYMBOL.
-In buffer, not all symbols are used as a functions.
-For example, `list' might be a variable holding a list.
-But `symbol-file' will consider it to be a function
-if have a function has same name, like `list'.
-
-So I try to check whether symbol is real function.
-If this symbol is function, the character immediately before it will
-be either ( or ' , otherwise this symbol is not considered a function."
-  (save-excursion
-    (let (current-char)
-      (backward-char (length (symbol-name symbol)))
-      (skip-chars-backward " \n\t")
-      (setq current-char (string (char-before)))
-      (if (or (string-equal "'" current-char)
-              (string-equal "(" current-char))
-          t
-        nil))))
-
 (defun elisp-depend-match-built-in-library (fullpath)
   "Return t if FULLPATH match directory with built-in library."
   (if (or (string-equal (format "%s.el" user-init-file) fullpath)
@@ -486,65 +436,6 @@ be either ( or ' , otherwise this symbol is not considered a function."
         (if (string-match (expand-file-name directory) fullpath)
             (throw 'match t)))
       nil)))
-
-(defun elisp-depend-let-variable-p ()
-  "Return t if symbol at point is a variable in `let' or `let*'.
-Otherwise return nil."
-  (save-excursion
-    (let (symbol)
-      (backward-up-list nil)            ;for compatibility Emacs 20
-      (skip-chars-backward " \n\t")
-      (when (and
-	       (> (point) 1)
-	       (string-equal "(" (string (char-before))))
-        (forward-char -1)
-        (skip-chars-backward " \n\t"))
-      (setq symbol (symbol-at-point))
-      (if (and symbol
-               (or (string-equal "let" (symbol-name symbol))
-                   (string-equal "let*" (symbol-name symbol))))
-          t
-        nil))))
-
-(defun elisp-depend-current-parse-state ()
-  "Return parse state of point from beginning of defun."
-  (let ((point (point)))
-    (beginning-of-defun)
-    ;; Calling PARSE-PARTIAL-SEXP will advance the point to its second
-    ;; argument (unless parsing stops due to an error, but we assume it
-    ;; won't in elisp-depend-mode).
-    (parse-partial-sexp (point) point)))
-
-(defun elisp-depend-in-string-p (&optional state)
-  "True if the parse STATE is within a double-quote-delimited string.
-If no parse state is supplied, compute one from the beginning of the
-  defun to the point."
-  ;; 3. non-nil if inside a string (the terminator character, really)
-  (and (nth 3 (or state (elisp-depend-current-parse-state)))
-       t))
-
-(defun elisp-depend-in-comment-p (&optional state)
-  "True if parse state STATE is within a comment.
-If no parse state is supplied, compute one from the beginning of the
-  defun to the point."
-  ;; 4. nil if outside a comment, t if inside a non-nestable comment,
-  ;;    else an integer (the current comment nesting)
-  (and (nth 4 (or state (elisp-depend-current-parse-state)))
-       t))
-
-(defun elisp-depend-string-start+end-points (&optional state)
-  "Return a cons of the points of open and close quotes of the string.
-The string is determined from the parse state STATE, or the parse state
-  from the beginning of the defun to the point.
-This assumes that `elisp-depend-in-string-p' has already returned true, i.e.
-  that the point is already within a string."
-  (save-excursion
-    ;; 8. character address of start of comment or string; nil if not
-    ;;    in one
-    (let ((start (nth 8 (or state (elisp-depend-current-parse-state)))))
-      (goto-char start)
-      (forward-sexp 1)
-      (cons start (1- (point))))))
 
 (provide 'elisp-depend)
 
