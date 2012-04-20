@@ -302,7 +302,7 @@ This function does not expand macros."
    ;; Don't want to drag `cl' in, so it's a tree of `if's.
    (if
       (symbolp sexp)
-      (list sexp)
+      (list `(var ,sexp))
       (if (consp sexp)
 	 (let
 	    ((functor (car sexp)))
@@ -316,7 +316,7 @@ This function does not expand macros."
 		  (if explorer
 		     (funcall (cadr explorer) sexp)
 		     (cons 
-			functor
+			`(func ,functor)
 			(elisp-depend-get-syms-recurse sexp 1))))))
 	 ;; It's neither symbol nor form, so there are no symbols in it.
 	 '())))
@@ -324,7 +324,15 @@ This function does not expand macros."
 
 ;; Translate symbols to requirements
 
-;; 
+(defun elisp-depend-sym-list->requirements (sym-list built-in)
+   ""
+
+   (let
+      ((seen-syms '())
+	 (requirements '())
+	 )
+      
+      ))
 
 ;; (elisp-depend-get-syms-recurse (elisp-depend-read-tree) 0)
 
