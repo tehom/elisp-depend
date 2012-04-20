@@ -7,9 +7,9 @@
 ;; "Michael Heerdegen" <michael_heerdegen@web.de>
 ;; Maintainer: Tom Breton (Tehom) tehom@panix.com
 ;; Copyright (C) 2009, Andy Stewart, all rights reserved.
-;; Copyright (C) 2010, Tom Breton, all rights reserved.
+;; Copyright (C) 2010-2012, Tom Breton, all rights reserved.
 ;; Created: 2009-01-11 19:40:45
-;; Version: 0.4.2
+;; Version: 1.0.0
 ;; Last-Updated: Sat  8 May, 2010 10:51 PM
 ;;           By: Tom Breton
 ;; URL: http://www.emacswiki.org/emacs/download/elisp-depend.el
@@ -214,7 +214,7 @@ Every library that has a parent directory in
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Utilities Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun elisp-depend-read-tree (&optional buffer built-in)
+(defun elisp-depend-read-tree (&optional buffer)
    "Return the tree given by reading the buffer as elisp.
 The top level is presented as a list, as if the buffer contents had been
 \(list CONTENTS...\)"
@@ -324,15 +324,51 @@ This function does not expand macros."
 
 ;; Translate symbols to requirements
 
-(defun elisp-depend-sym-list->requirements (sym-list built-in)
+(defun elisp-depend-sym-list->dependencies (sym-list current-filename built-in see-vars)
    ""
 
    (let
-      ((seen-syms '())
-	 (requirements '())
-	 )
-      
-      ))
+      ((symbol-seen '())
+	 (dependencies '()))
+      ;; Poor-man's dolist
+      (while sym-list
+	 (let* 
+	    (  (el (car sym-list))
+	       (type (car el))
+	       (symbol (cadr el))
+	       ;; Poor-man's and-let*.  These get set and checked below.
+	       filepath filename)
+	    (if
+	       (and
+		  ;; Haven't already treated it
+		  (not (memq symbol symbol-seen))
+		  ;; It's a function, or we're allowing vars.
+		  (or see-vars (eq type 'func))
+		  ;; and it's not a C function.
+		  (not (subrp symbol))
+		  ;; Get the file that defines this symbol
+		  (setq filepath (symbol-file symbol))
+		  ;; Get file name without extension.
+		  (setq filename (elisp-depend-filename filepath))
+		  ;; It's not defined in the buffer we're exploring.
+		  (not (string= filename current-filename))
+		  ;; It's not built in or we're allowing built-ins
+		  (or built-in
+		     (not
+			(elisp-depend-match-built-in-library
+			   filepath))))
+	       (let
+		  ((dentry (assoc filepath dependencies)))
+		  (if dentry
+		     (setcdr dentry (cons symbol (cdr dentry)))
+		     (setq dependencies 
+			(cons 
+			   (cons filepath (list symbol)) 
+			   dependencies))))))
+	 (setq sym-list (cdr sym-list)))
+      ;;
+      dependencies))
+
 
 ;; (elisp-depend-get-syms-recurse (elisp-depend-read-tree) 0)
 
@@ -341,56 +377,19 @@ This function does not expand macros."
 If BUFFER is nil, use current buffer.
 If BUILT-IN is non-nil, return built-in library information.
 Return depend map as format: (filepath symbol-A symbol-B symbol-C)."
-  (save-excursion
-    (set-buffer (or buffer (current-buffer)))
-    (goto-char (point-min))
-    (let (symbol symbol-seen filepath filename current-filename dentry deps)
-      ;; Get current buffer file name without extension.
-      (setq current-filename (elisp-depend-filename (buffer-file-name)))
-      (while (not (eobp))
-        ;; Forward symbol.
-        (forward-symbol 1)
-        ;; Skip string.
-        (elisp-depend-skip-string)
-        ;; Skip comment.
-        (elisp-depend-skip-comment)
-        ;; Skip defun name and argument list.
-        (elisp-depend-skip-defun-name-and-argument)
-        ;; Check symbol.
-        (when (and
-               ;; Not in string or comment.
-               (not (elisp-depend-in-string-p))
-               (not (elisp-depend-in-comment-p))
-               ;; Get symbol at point.
-               (setq symbol (symbol-at-point))
-               ;; Not  in `let' or `let*'.
-               (not (elisp-depend-let-variable-p))
-               ;; Just test function, skip variable.
-               (functionp symbol)
-               ;; Filter pseudo function symbol.
-               (elisp-depend-filter-pseudo-function-symbol symbol)
-               ;; Not built-in function.
-               (not (subrp symbol))
-               ;; Find symbol define file.
-               (setq filepath (symbol-file symbol))
-               ;; Get file name without extension.
-               (setq filename (elisp-depend-filename filepath))
-               ;; Not current buffer file.
-               (not (string= filename current-filename))
-               ;; Not match built-in load path.
-               (if built-in
-                   ;; Don't filter built-in libraries when
-                   ;; option `built-in' is non-nil.
-                   t
-                 ;; Otherwise filter built-in libraries.
-                 (not (elisp-depend-match-built-in-library filepath)))
-               ;; Not seen before.
-               (not (memq symbol symbol-seen)))
-          (setq symbol-seen (cons symbol symbol-seen))
-          (if (setq dentry (assoc filepath deps))
-              (setcdr dentry (cons symbol (cdr dentry)))
-            (setq deps (cons (cons filepath (list symbol)) deps)))))
-      deps)))
+   (let* 
+      (
+	 (tree (elisp-depend-read-tree buffer))
+	 (sym-list (elisp-depend-get-syms-recurse tree 0))
+	 (dependencies
+	    (elisp-depend-sym-list->dependencies
+	       sym-list
+	       (elisp-depend-filename (buffer-file-name buffer))
+	       built-in 
+	       nil)))
+      
+      dependencies))
+
 
 (defun elisp-depend-get-load-history-line (path-sans-ext extension)
    "Return line in load-history correspoding to PATH-SANS-EXT with
