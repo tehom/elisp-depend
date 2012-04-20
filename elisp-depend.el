@@ -231,6 +231,8 @@ The top level is presented as a list, as if the buffer contents had been
 
 ;;;; Getting the symbols from a sexp list
 
+;; Exploration helpers.  These call elisp-depend-sexp->sym-list
+
 (defun elisp-depend-get-syms-recurse (sexp n)
    "Gets syms from a form that ignores the first N arguments and
 recurses on the rest."
@@ -248,11 +250,30 @@ are mentioned in them."
    "Gets syms from a definition form like \(DEF NAME BODY OPTIONS...\)."
    (elisp-depend-sexp->sym-list (nthcar 2 sexp)))
 
+(defun elisp-depend-let-form->sym-list (sexp)
+   "Gets syms from a let form like \(LET ((NAME BODY)...) BODY...\)."
+   
+   (let*
+      ((binding-forms (cadr sexp)))
+
+      (append
+	 (apply #'append
+	    (mapcar 
+	       #'(lambda (b-form)
+		    (elisp-depend-sexp->sym-list (cadr b-form)))
+	       binding-forms))
+	 (elisp-depend-get-syms-recurse (cddr sexp) 0))))
+
+
 (defconst elisp-depend-special-explorers 
    (list
       (list 'quote 
 	 #'(lambda (dummy) '()))
-      
+      (list 'provide 
+	 #'(lambda (dummy) '()))
+      (list 'require 
+	 #'(lambda (dummy) '()))
+
       (list 'defun
 	 #'elisp-depend-defun-form->sym-list)
       (list 'defmacro
@@ -306,6 +327,8 @@ This function does not expand macros."
 ;; Translate symbols to requirements
 
 ;; 
+
+;; (elisp-depend-get-syms-recurse (elisp-depend-read-tree) 0)
 
 (defun elisp-depend-map (&optional buffer built-in)
   "Return depend map with BUFFER.
