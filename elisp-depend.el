@@ -229,34 +229,36 @@ The top level is presented as a list, as if the buffer contents had been
 	       (setq tree (cons (read (current-buffer)) tree)))
 	    (error tree)))))
 
-(defun elisp-depend-get-syms--recurse (sexp n)
+;;;; Getting the symbols from a sexp list
+
+(defun elisp-depend-get-syms-recurse (sexp n)
    "Gets syms from a form that ignores the first N arguments and
 recurses on the rest."
    
    (apply #'append
-      (mapcar #'elisp-depend-get-syms-from-tree (nthcdr n sexp))))
+      (mapcar #'elisp-depend-sexp->sym-list (nthcdr n sexp))))
 
-(defun elisp-depend-get-syms--0-0-* (sexp)
+(defun elisp-depend-defun-form->sym-list (sexp)
    "Gets syms from a definition form like \(DEF NAME ARGS BODY...\).
 
 We don't try to understand argument lists or skip variables that
 are mentioned in them."
-   (elisp-depend-get-syms--recurse sexp 3))
+   (elisp-depend-get-syms-recurse sexp 3))
 
 (defconst elisp-depend-special-explorers 
    (list
-      (list 'defun #'elisp-depend-get-syms--0-0-*)
+      (list 'defun #'elisp-depend-defun-form->sym-list)
       (list 'lambda 
 	 #'(lambda (sexp)
-	      (elisp-depend-get-syms--recurse sexp 2)))
-      ;; defvar
+	      (elisp-depend-get-syms-recurse sexp 2)))
+      
       
       )
    "Alist of symbols to expand specially, mapping from symbol to
 explore function.  Explore functions take one argument, a sexp, and
 return a list of symbols." )
 
-(defun elisp-depend-get-syms-from-tree (sexp)
+(defun elisp-depend-sexp->sym-list (sexp)
    "Return all the referenced symbols from the sexp, as a list.
 
 The result omits `defun' and similar built-ins.  The result may
@@ -275,7 +277,7 @@ This function does not expand macros."
 	    (if
 	       (not (consp functor))
 	       ;; Functor is a lambda or similar.
-	       (elisp-depend-get-syms--recurse sexp 0)
+	       (elisp-depend-get-syms-recurse sexp 0)
 	       (let*
 		  ((explorer
 		      (assoc functor elisp-depend-special-explorers)))
@@ -283,7 +285,7 @@ This function does not expand macros."
 		     (funcall (cadr explorer) sexp)
 		     (cons 
 			functor
-			(elisp-depend-get-syms--recurse sexp 1))))))
+			(elisp-depend-get-syms-recurse sexp 1))))))
 	 ;; It's neither symbol nor form, so there are no symbols in it.
 	 '())))
 
