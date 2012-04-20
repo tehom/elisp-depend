@@ -213,6 +213,31 @@ Every library that has a parent directory in
       (message "Doesn't need any extra libraries."))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Utilities Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun elisp-depend-read-tree (&optional buffer built-in)
+   "Return the tree given by reading the buffer as elisp.
+The top level is presented as a list, as if the buffer contents had been
+\(list CONTENTS...\)"
+   (let* 
+      ((tree '()))
+      (save-excursion
+	 (set-buffer (or buffer (current-buffer)))
+	 (goto-char (point-min))
+	 ;; Loop is deliberately terminated by a read error at EOF.
+	 (condition-case nil
+	    (while t
+	       (setq tree (cons (read (current-buffer)) tree)))
+	    (error tree)))))
+
+
+(defun elisp-depend-get-syms-from-tree (tree)
+   "Get all the meaningful symbols from the tree.
+This may contain duplicates"
+
+   (let*
+      ()
+      
+      ))
 (defun elisp-depend-map (&optional buffer built-in)
   "Return depend map with BUFFER.
 If BUFFER is nil, use current buffer.
