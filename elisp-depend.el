@@ -229,15 +229,69 @@ The top level is presented as a list, as if the buffer contents had been
 	       (setq tree (cons (read (current-buffer)) tree)))
 	    (error tree)))))
 
+(defun elisp-depend-get-syms--recurse (sexp n)
+   "Gets syms from a form that ignores the first N arguments and
+recurses on the rest."
+   
+   (apply #'append
+      (mapcar #'elisp-depend-get-syms-from-tree (nthcdr n sexp))))
 
-(defun elisp-depend-get-syms-from-tree (tree)
-   "Get all the meaningful symbols from the tree.
-This may contain duplicates"
+(defun elisp-depend-get-syms--0-0-* (sexp)
+   "Gets syms from a definition form like \(DEF NAME ARGS BODY...\).
 
-   (let*
-      ()
+We don't try to understand argument lists or skip variables that
+are mentioned in them."
+   (elisp-depend-get-syms--recurse sexp 3))
+
+(defconst elisp-depend-special-explorers 
+   (list
+      (list 'defun #'elisp-depend-get-syms--0-0-*)
+      (list 'lambda 
+	 #'(lambda (sexp)
+	      (elisp-depend-get-syms--recurse sexp 2)))
+      ;; defvar
       
-      ))
+      )
+   "Alist of symbols to expand specially, mapping from symbol to
+explore function.  Explore functions take one argument, a sexp, and
+return a list of symbols." )
+
+(defun elisp-depend-get-syms-from-tree (sexp)
+   "Return all the referenced symbols from the sexp, as a list.
+
+The result omits `defun' and similar built-ins.  The result may
+contain duplicates.  It does not distinguish symbols called as
+functions from variables.  
+
+This function does not expand macros."
+
+   ;; Don't want to drag `cl' in, so it's a tree of `if's.
+   (if
+      (symbolp sexp)
+      (list sexp)
+      (if (consp sexp)
+	 (let
+	    ((functor (car sexp)))
+	    (if
+	       (not (consp functor))
+	       ;; Functor is a lambda or similar.
+	       (elisp-depend-get-syms--recurse sexp 0)
+	       (let*
+		  ((explorer
+		      (assoc functor elisp-depend-special-explorers)))
+		  (if explorer
+		     (funcall (cadr explorer) sexp)
+		     (cons 
+			functor
+			(elisp-depend-get-syms--recurse sexp 1))))))
+	 ;; It's neither symbol nor form, so there are no symbols in it.
+	 '())))
+
+
+;; Translate symbols to requirements
+
+;; 
+
 (defun elisp-depend-map (&optional buffer built-in)
   "Return depend map with BUFFER.
 If BUFFER is nil, use current buffer.
