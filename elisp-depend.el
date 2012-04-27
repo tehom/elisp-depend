@@ -257,8 +257,8 @@ recurses on the rest."
    (if (elisp-depend-proper-list-p sexp)
       (apply #'append
 	 (mapcar #'elisp-depend-sexp->sym-list (nthcdr n sexp)))
-      ;; If it's a dotted list, just punt.
-      '()))
+      ;; If it's a dotted list, complain.
+      (error "Code contains a dotted list not backquoted: %s" sexp)))
 
 (defun elisp-depend-defun-form->sym-list (sexp)
    "Gets syms from a definition form like \(DEF NAME ARGS BODY...\).
