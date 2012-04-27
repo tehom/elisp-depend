@@ -275,23 +275,26 @@ are mentioned in them."
 	       binding-forms))
 	 (elisp-depend-get-syms-recurse (cddr sexp) 0))))
 
-
 (defconst elisp-depend-special-explorers 
    '(
-      (quote ignore)
-      (provide ignore)
-      (require ignore)
-
-      (defun elisp-depend-defun-form->sym-list)
-      (defmacro elisp-depend-defun-form->sym-list)
-      (defvar elisp-depend-defvar-form->sym-list)
-      (defconst elisp-depend-defvar-form->sym-list)
-      (lambda (lambda (sexp)
-		 (elisp-depend-get-syms-recurse sexp 2)))
+       (quote ignore)
+       (\` 
+	  (lambda (sexp)
+	     (elisp-depend-sexp->sym-list (macroexpand sexp))))
+       
+       (provide ignore)
+       (require ignore)
+       
+       (defun elisp-depend-defun-form->sym-list)
+       (defmacro elisp-depend-defun-form->sym-list)
+       (defvar elisp-depend-defvar-form->sym-list)
+       (defconst elisp-depend-defvar-form->sym-list)
+       (lambda (lambda (sexp)
+		  (elisp-depend-get-syms-recurse sexp 2)))
       
        (let elisp-depend-let-form->sym-list)
        (let* elisp-depend-let-form->sym-list)
-      )
+       )
    "Alist of symbols to expand specially, mapping from symbol to
 explore function.  Explore functions take one argument, a sexp, and
 return a list of symbols." )
