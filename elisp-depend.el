@@ -171,7 +171,7 @@ Every library that has a parent directory in
          (mapconcat (lambda (dep)
                       (format "%s: %s"
                               (propertize (elisp-depend-filename (car dep)) 'face 'match)
-                              (mapconcat #'symbol-name (cdr dep) ", ")))
+                              (mapconcat #'symbol-name (delete-dups (cdr dep)) ", ")))
                     (elisp-depend-map nil built-in) "\n")))
     (switch-to-buffer (get-buffer-create "*Dependencies*"))
     (setq truncate-lines nil
@@ -225,14 +225,15 @@ The top level is presented as a list, as if the buffer contents had been
 \(list CONTENTS...\)"
    (let* 
       ((tree '()))
-      (save-excursion
-	 (set-buffer (or buffer (current-buffer)))
-	 (goto-char (point-min))
-	 ;; Loop is deliberately terminated by a read error at EOF.
-	 (condition-case nil
-	    (while t
-	       (setq tree (cons (read (current-buffer)) tree)))
-	    (error tree)))))
+      (with-current-buffer (or buffer (current-buffer))
+        (save-restriction
+          (widen)
+          (goto-char (point-min))
+          ;; Loop is deliberately terminated by a read error at EOF.
+          (condition-case nil
+              (while t
+                (setq tree (cons (read (current-buffer)) tree)))
+            (error tree))))))
 
 ;;;; Getting the symbols from a sexp list
 
@@ -253,6 +254,7 @@ recurses on the rest."
 We don't try to understand argument lists or skip variables that
 are mentioned in them."
    (elisp-depend-get-syms-recurse sexp 3))
+
 (defun elisp-depend-defvar-form->sym-list (sexp)
    "Gets syms from a definition form like \(DEF NAME BODY OPTIONS...\)."
    (elisp-depend-sexp->sym-list (nth 2 sexp)))
@@ -276,9 +278,9 @@ are mentioned in them."
 
 (defconst elisp-depend-special-explorers 
    '(
-      (quote (lambda (dummy) '()))
-      (provide (lambda (dummy) '()))
-      (require (lambda (dummy) '()))
+      (quote ignore)
+      (provide ignore)
+      (require ignore)
 
       (defun elisp-depend-defun-form->sym-list)
       (defmacro elisp-depend-defun-form->sym-list)
