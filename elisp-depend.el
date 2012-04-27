@@ -10,8 +10,8 @@
 ;; Copyright (C) 2010-2012, Tom Breton, all rights reserved.
 ;; Created: 2009-01-11 19:40:45
 ;; Id: $Id$
-;; Version: 1.0.1
-;; Last-Updated: Fri 20 Apr, 2012
+;; Version: 1.0.2
+;; Last-Updated: 26 Apr, 2012
 ;;           By: Tom Breton
 ;; URL: http://www.emacswiki.org/emacs/download/elisp-depend.el
 ;; Keywords: elisp-depend
@@ -237,6 +237,15 @@ The top level is presented as a list, as if the buffer contents had been
 
 ;;;; Getting the symbols from a sexp list
 
+;; Borrowed from format
+(defun elisp-depend-proper-list-p (list)
+   "Return t if LIST is a proper list.
+A proper list is a list ending with a nil cdr, not with an atom "
+   (when (listp list)
+      (while (consp list)
+	 (setq list (cdr list)))
+      (null list)))
+
 ;; Exploration helpers.  These generally call
 ;; `elisp-depend-sexp->sym-list', implicitly recursing.  They do not
 ;; attempt to skip symbols that are bound by arglists, let forms, etc.
@@ -244,9 +253,11 @@ The top level is presented as a list, as if the buffer contents had been
 (defun elisp-depend-get-syms-recurse (sexp n)
    "Gets syms from a form that ignores the first N arguments and
 recurses on the rest."
-   
-   (apply #'append
-      (mapcar #'elisp-depend-sexp->sym-list (nthcdr n sexp))))
+   (if (elisp-depend-proper-list-p sexp)
+      (apply #'append
+	 (mapcar #'elisp-depend-sexp->sym-list (nthcdr n sexp)))
+      ;; If it's a dotted list, just punt.
+      '()))
 
 (defun elisp-depend-defun-form->sym-list (sexp)
    "Gets syms from a definition form like \(DEF NAME ARGS BODY...\).
