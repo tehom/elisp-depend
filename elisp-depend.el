@@ -226,14 +226,15 @@ The top level is presented as a list, as if the buffer contents had been
    (let* 
       ((tree '()))
       (with-current-buffer (or buffer (current-buffer))
-        (save-restriction
-          (widen)
-          (goto-char (point-min))
-          ;; Loop is deliberately terminated by a read error at EOF.
-          (condition-case nil
-              (while t
-                (setq tree (cons (read (current-buffer)) tree)))
-            (error tree))))))
+	 (save-excursion
+	    (save-restriction
+	       (widen)
+	       (goto-char (point-min))
+	       ;; Loop is deliberately terminated by a read error at EOF.
+	       (condition-case nil
+		  (while t
+		     (setq tree (cons (read (current-buffer)) tree)))
+		  (error tree)))))))
 
 ;;;; Getting the symbols from a sexp list
 
