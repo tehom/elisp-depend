@@ -1,7 +1,7 @@
 ;;; elisp-depend.el --- Parse depend libraries of elisp file.
 
 ;; Filename: elisp-depend.el
-;; Description: Parse depends library of elisp file.
+;; Description: List library dependencies of an elisp file.
 ;; Authors: Andy Stewart lazycat.manatee@gmail.com
 ;; Tom Breton (Tehom) tehom@panix.com
 ;; "Michael Heerdegen" <michael_heerdegen@web.de>
