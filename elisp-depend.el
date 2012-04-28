@@ -374,7 +374,9 @@ This function does not expand macros."
 		  ;; Get file name without extension.
 		  (setq filename (elisp-depend-filename filepath))
 		  ;; It's not defined in the buffer we're exploring.
-		  (not (string= filename current-filename))
+		  (if current-filename
+		     (not (string= filename current-filename))
+		     t)
 		  ;; It's not built in or we're allowing built-ins
 		  (or built-in
 		     (not
@@ -401,10 +403,13 @@ Return depend map as format: (filepath symbol-A symbol-B symbol-C)."
       (
 	 (tree (elisp-depend-read-tree buffer))
 	 (sym-list (elisp-depend-get-syms-recurse tree 0))
+	 (filename (buffer-file-name buffer))
 	 (dependencies
 	    (elisp-depend-sym-list->dependencies
 	       sym-list
-	       (elisp-depend-filename (buffer-file-name buffer))
+	       (if filename
+		  (elisp-depend-filename filename)
+		  nil)
 	       built-in 
 	       nil)))
       
