@@ -292,7 +292,9 @@ are mentioned in them."
        (quote ignore)
        (\` 
 	  (lambda (sexp)
-	     (elisp-depend-sexp->sym-list (macroexpand sexp))))
+	     (cons 
+		'(func \`)
+		(elisp-depend-sexp->sym-list (macroexpand sexp)))))
        
        (provide ignore)
        (require ignore)
